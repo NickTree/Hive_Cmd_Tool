@@ -1,0 +1,159 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style>
+body{
+background:#000;
+margin:0;
+width:100%;
+padding:0;
+overflow:hidden;
+font-size:1em;
+color:#E0E0E0;
+font-family:arial,sans-serif;
+}
+.input{
+font-family:arial,sans-serif;
+font-size:1em;
+width:100%;
+margin:0;
+padding:0;
+background:#000;
+color:#55FF55;
+border:0;
+border-top:1px #555 solid;
+padding:.3em;
+padding-left:3em;
+}
+.green_font{
+color:#55FF55;
+}
+#monitor{
+width:100%;
+font-size:1em;
+font-family:"Comic Sans MS",arial,sans-serif;
+overflow:auto;position:absolute;top:0;bottom:1.8em;left:0;right:0;background:#000;color:#e0e0e0;padding:.3em;margin:0
+}
+</style>
+<script src="jquery-2.1.4.js" ></script>
+<script>
+
+var monitor,monitor_elem,input,ws;
+
+function wsinit(){
+    ws = new WebSocket("ws://10.242.192.220:8080/web");
+}
+wsinit()
+
+ws.onopen = function(){
+};
+ws.onmessage = function(message){
+     if (message.data == "-1"){
+        monitor_elem.innerHTML='';
+    } else {
+     output(message.data + "\n")
+    }
+};
+
+function closeConnect(){
+    ws.close();
+}
+
+function fit(){
+    monitor_elem.scrollTop=monitor_elem.scrollHeight;
+}
+function strip(str){
+    return str.replace(/(^\s+)|(\s+$)/g,'')
+}
+function output(txt){
+    txt=strip(txt).replace(/ /g,"\u00a0")
+    var txt_array=txt.split("\r\n");
+    if(txt_array.length==1){
+        txt_array=txt.split("\r")
+    }
+    if(txt_array.length==1){
+        txt_array=txt.split("\n")
+    }
+    for(
+        var i=txt_array.length-1;
+        i>=0;
+        --i
+    ){
+    monitor.append(document.createTextNode(txt_array[i]));
+    monitor.append(document.createElement("br"))
+    }
+    fit()
+}
+function command(cmd){
+    //$("#monitor").animate({scrollTop:$("#monitor").height()},1000);
+    switch(strip(cmd)){
+        case 'clear':case 'cls':
+            monitor_elem.innerHTML='';
+            monitor.append(document.createTextNode("> "));
+        break;
+        case '?':case 'help':
+            output($("#cmd_help").text());
+        break;
+        default:
+            if(ws.readyState != 1 ){
+                ws.close()
+                wsinit()
+                output("请确定链接了VPN, Session Time out ,Enter Password angin:")
+            }else{
+            ws.send(cmd);}
+        break;
+    }
+}
+$(function(){
+    monitor=$("#monitor"),monitor_elem=monitor.get(0),input=$("#input");
+    $("body").click(function(){
+        //input.focus()
+        input.attr('value',input.attr('value'))
+    });
+
+    $('#input').bind('keypress',function(e){
+        console.log(e.keyCode)
+        console.log(e.which)
+        if(e.keyCode==13){
+            var value=$('#input').val()
+            console.log(value)
+            if(value){
+                monitor.append(document.createTextNode("hive> "));
+                var span=document.createElement("span");
+                span.className="green_font";
+                span.appendChild(document.createTextNode($('#input').val()));
+                monitor.append(span);
+                monitor.append(document.createElement("br"))
+                fit()
+                $('#input').val("")
+                command(value)
+                fit()
+            }
+       }
+    })
+    output("帮助请输入 ？")
+    output("Please Enter Password:")
+
+    //hack for google chrome
+    //setTimeout(function(){output("启动完成");command("cls")},1000)
+})
+</script>
+</head>
+<body scroll="no">
+
+    <div id="monitor"> </div>
+    <div id="state" style="position:absolute;bottom:0;width:100%;">
+    <span style="position:absolute;padding-top:.3em;"> hive&gt;</span>
+    <input class="input" id="input" wrap="off" ></input>
+    </div>
+<pre id="cmd_help" style="display:none">
+1. ? / help : 显示帮助
+2. clear / cls : 清屏
+3. 请链接VPN
+4. 无法使用 update delete create等
+5. 密码请联系hzjiangww
+6. 支持use datablse ，需以分号结尾sql
+</pre>
+    </body>
+</html>
